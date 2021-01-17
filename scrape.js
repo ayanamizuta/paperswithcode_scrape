@@ -1,4 +1,6 @@
 const puppeteer = require('puppeteer');
+const AsyncLock = require('async-lock');
+const lock = new AsyncLock();
 
 const scrape = async (page,url,fav_threshold) => {
     await page.goto(url);
@@ -15,15 +17,20 @@ const scrape = async (page,url,fav_threshold) => {
     },fav_threshold)
 
     const result = await Promise.all(metadata.map(async item => {
-        await page.goto(item.url)
-        await page.waitFor(1000)
+        const abstract = await lock.acquire('paper', async (done) => {
+            await page.goto(item.url)
+            await page.waitFor(1000)
 
-        const abstract = await page.evaluate(() => {
-            document.querySelector(".paper-abstract a").click()
-            return document.querySelector(".paper-abstract p")
-            .innerText.replace("(show less)","")
+            const abstract = await page.evaluate(() => {
+                document.querySelector(".paper-abstract a").click()
+                return document.querySelector(".paper-abstract p")
+                .innerText.replace("(show less)","")
+            })
+
+            done(null,abstract)
+        }).then(ret => {
+            return ret
         })
-
         return {
             ...item,
             abstract: abstract
@@ -34,6 +41,7 @@ const scrape = async (page,url,fav_threshold) => {
 }
 
 const pretty_print = async (data) => {
+    console.log(data)
     // assume paste to scrapbox
     data.forEach(item => {
         console.log(`[* ${item.title}]`)
