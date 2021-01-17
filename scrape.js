@@ -41,7 +41,6 @@ const scrape = async (page,url,fav_threshold) => {
 }
 
 const pretty_print = async (data) => {
-    console.log(data)
     // assume paste to scrapbox
     data.forEach(item => {
         console.log(`[* ${item.title}]`)
