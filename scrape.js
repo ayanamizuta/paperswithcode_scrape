@@ -5,6 +5,21 @@ const lock = new AsyncLock();
 const scrape = async (page,url,fav_threshold) => {
     await page.goto(url);
     await page.waitFor(1000)
+
+    // scroll
+    await page._client.send(
+        'Input.synthesizeScrollGesture',
+        {
+          x: 0,
+          y: 0,
+          xDistance: 0,
+          yDistance: -1000,
+          repeatCount: 30,
+          repeatDelayMs: 1000
+    
+        }
+    );
+
     // fetch objects whose fav >= threshold
     const metadata = await page.evaluate((fav_threshold) => {
         return Array.from(document.querySelectorAll('.infinite-item'))
@@ -21,13 +36,18 @@ const scrape = async (page,url,fav_threshold) => {
             await page.goto(item.url)
             await page.waitFor(1000)
 
-            const abstract = await page.evaluate(() => {
-                document.querySelector(".paper-abstract a").click()
-                return document.querySelector(".paper-abstract p")
-                .innerText.replace("(show less)","")
-            })
-
-            done(null,abstract)
+            try {
+                const abstract = await page.evaluate(() => {
+                    document.querySelector(".paper-abstract a").click()
+                    return document.querySelector(".paper-abstract p")
+                    .innerText.replace("(show less)","")
+                })
+    
+                done(null,abstract)
+            } catch(e) {
+                done(null,e)
+            }
+            
         }).then(ret => {
             return ret
         })
@@ -65,7 +85,7 @@ if(process.argv.length != 2 + 2){
         args: ['--disable-dev-shm-usage','--no-sandbox']
     });
     const page = await browser.newPage();
-    // [todo] fetch infinite-item
+    
     await page.setViewport({width: 1200, height: 4000})
     // raise error at 4xx
     page.on('response', response => {
@@ -78,5 +98,5 @@ if(process.argv.length != 2 + 2){
     const result = await scrape(page,url,fav_threshold)
 
     await pretty_print(result)
-
+    process.exit(0);
 })()
