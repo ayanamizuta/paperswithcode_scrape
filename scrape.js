@@ -9,7 +9,7 @@ const scrape = async (page,url,fav_threshold) => {
     const metadata = await page.evaluate((fav_threshold) => {
         return Array.from(document.querySelectorAll('.infinite-item'))
         .filter(item => 
-            Number(item.querySelector(".badge-secondary").innerText) >= fav_threshold)
+            Number(item.querySelector(".badge-secondary").innerText.replace(",","")) >= fav_threshold)
         .map((item) => { return {
             url: item.querySelector("a").href,
             title: item.querySelector("h1 a").innerText,
